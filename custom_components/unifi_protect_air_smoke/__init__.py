@@ -68,7 +68,7 @@ def _remove_stale(
             domain == DOMAIN and ident in coordinator.devices
             for domain, ident in dev.identifiers
         ):
-            dev_reg.async_update_device(dev.id, remove_config_entry_id=entry.entry_id)
+            dev_reg.async_remove_device(dev.id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ProtectConfigEntry) -> bool:
