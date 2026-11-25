@@ -1,0 +1,15 @@
+{
+  "domain": "unifi_protect_air_smoke",
+  "name": "UniFi Protect Air & Smoke",
+  "codeowners": [
+    "@tvanbave"
+  ],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/tvanbave/ha-unifi-protect-air-smoke",
+  "integration_type": "hub",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/tvanbave/ha-unifi-protect-air-smoke/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}

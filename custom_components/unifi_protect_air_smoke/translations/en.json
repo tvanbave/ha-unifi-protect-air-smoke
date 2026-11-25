@@ -1,0 +1,91 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to UniFi Protect",
+        "description": "Use a local UniFi OS account (not a Ubiquiti cloud login) that can view Protect devices. The integration only reads data.",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "username": "Username",
+          "password": "Password",
+          "verify_ssl": "Verify SSL certificate"
+        },
+        "data_description": {
+          "host": "IP address or hostname of the console running Protect (for example your UNVR).",
+          "verify_ssl": "Leave off for the console's default self-signed certificate."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Re-enter Protect credentials",
+        "data": { "username": "Username", "password": "Password" }
+      },
+      "reconfigure": {
+        "title": "Change the Protect connection",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "username": "Username",
+          "password": "Password",
+          "verify_ssl": "Verify SSL certificate"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not connect to the console.",
+      "invalid_auth": "The console rejected the username or password.",
+      "unknown": "Unexpected error; check the logs."
+    },
+    "abort": {
+      "already_configured": "This console is already configured.",
+      "reauth_successful": "Credentials updated.",
+      "reconfigure_successful": "Connection updated.",
+      "wrong_console": "That address belongs to a different console."
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "air_quality_alert": { "name": "Air quality alert" },
+      "vape": { "name": "Vape detected" }
+    },
+    "event": {
+      "alarm_event": {
+        "name": "Alarm",
+        "state_attributes": {
+          "event_type": {
+            "state": { "smoke": "Smoke", "co": "Carbon monoxide" }
+          }
+        }
+      },
+      "maintenance_event": {
+        "name": "Maintenance",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "self_test": "Self-test",
+              "battery_low": "Battery low",
+              "needs_cleaning": "Needs cleaning",
+              "smoke_fault": "Smoke sensor fault",
+              "co_fault": "CO sensor fault",
+              "end_of_life": "End of life"
+            }
+          }
+        }
+      },
+      "air_alert_event": {
+        "name": "Air quality event",
+        "state_attributes": {
+          "event_type": {
+            "state": { "extreme": "Threshold exceeded", "vape": "Vape detected" }
+          }
+        }
+      }
+    },
+    "sensor": {
+      "tvoc": { "name": "TVOC" },
+      "voc_index": { "name": "VOC index" },
+      "nox_index": { "name": "NOx index" },
+      "vape_index": { "name": "Vape index" }
+    }
+  }
+}
