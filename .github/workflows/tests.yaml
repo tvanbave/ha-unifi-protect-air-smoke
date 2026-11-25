@@ -1,0 +1,22 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v4"
+      - uses: "astral-sh/setup-uv@v6"
+      - name: Install
+        run: |
+          uv venv -p 3.14 .venv
+          uv pip install --python .venv pytest-homeassistant-custom-component
+      - name: Run tests
+        run: .venv/bin/python -m pytest -q

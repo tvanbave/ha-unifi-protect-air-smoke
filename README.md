@@ -20,8 +20,11 @@ UniFi Protect integration and does not replace it.
 
 ## Setup
 
-1. Install through the Marketplace / HACS as a custom repository (category
-   *Integration*), then restart Home Assistant.
+1. In **Settings → Marketplace** (or HACS on older versions), search for
+   **UniFi Protect Air & Smoke**. Until it is listed in the default catalog,
+   use **Add from link** / **Custom repositories** with
+   `https://github.com/tvanbave/ha-unifi-protect-air-smoke` (category
+   *Integration*). Install it, then restart Home Assistant.
 2. **Settings → Devices & services → Add integration → UniFi Protect Air & Smoke.**
 3. Enter the console's IP (e.g. your UNVR), port 443, and a **local** UniFi OS
    user with Protect view access. Leave *Verify SSL* off for the console's
@@ -44,3 +47,7 @@ UniFi Protect integration and does not replace it.
 uv venv -p 3.14 .venv && uv pip install pytest-homeassistant-custom-component
 .venv/bin/python -m pytest
 ```
+
+## License
+
+MIT. Not affiliated with or endorsed by Ubiquiti.
