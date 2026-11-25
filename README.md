@@ -7,10 +7,11 @@ built-in UniFi Protect integration does not expose yet:
   TVOC, VOC index, NOx index, AQI and vape index (only the metrics your sensor
   reports are created), an **Air quality alert** binary sensor, a **Vape
   detected** binary sensor and an **Air quality event** entity.
-- **USL Smoke**: **Smoke** and **Carbon monoxide** binary sensors (on while
-  Protect reports an open alarm), an **Alarm** event entity (smoke / CO) and a
-  **Maintenance** event entity (self-test, battery low, needs cleaning, smoke
-  fault, CO fault, end of life).
+- **USL Smoke**: **Smoke** and **Carbon monoxide** binary sensors (from the
+  detector's live `smokeStatus`, backed by Protect's alarm events); diagnostic
+  sensors for battery low, needs cleaning, smoke / CO sensor fault, end of life,
+  self-test running and alarm silenced; raw smoke and CO sensor values; an
+  **Alarm** event entity (smoke / CO) and a **Maintenance** event entity.
 
 It is read-only and talks to the Protect console on your LAN: it logs in with a
 local UniFi OS account, polls every 60 s, and listens to Protect's live update

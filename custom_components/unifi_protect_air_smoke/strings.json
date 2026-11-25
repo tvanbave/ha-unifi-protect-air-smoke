@@ -18,7 +18,10 @@
       },
       "reauth_confirm": {
         "title": "Re-enter Protect credentials",
-        "data": { "username": "Username", "password": "Password" }
+        "data": {
+          "username": "Username",
+          "password": "Password"
+        }
       },
       "reconfigure": {
         "title": "Change the Protect connection",
@@ -45,15 +48,40 @@
   },
   "entity": {
     "binary_sensor": {
-      "air_quality_alert": { "name": "Air quality alert" },
-      "vape": { "name": "Vape detected" }
+      "air_quality_alert": {
+        "name": "Air quality alert"
+      },
+      "vape": {
+        "name": "Vape detected"
+      },
+      "needs_cleaning": {
+        "name": "Needs cleaning"
+      },
+      "smoke_sensor_fault": {
+        "name": "Smoke sensor fault"
+      },
+      "co_sensor_fault": {
+        "name": "CO sensor fault"
+      },
+      "end_of_life": {
+        "name": "End of life"
+      },
+      "testing": {
+        "name": "Self-test running"
+      },
+      "alarm_silenced": {
+        "name": "Alarm silenced"
+      }
     },
     "event": {
       "alarm_event": {
         "name": "Alarm",
         "state_attributes": {
           "event_type": {
-            "state": { "smoke": "Smoke", "co": "Carbon monoxide" }
+            "state": {
+              "smoke": "Smoke",
+              "co": "Carbon monoxide"
+            }
           }
         }
       },
@@ -76,16 +104,33 @@
         "name": "Air quality event",
         "state_attributes": {
           "event_type": {
-            "state": { "extreme": "Threshold exceeded", "vape": "Vape detected" }
+            "state": {
+              "extreme": "Threshold exceeded",
+              "vape": "Vape detected"
+            }
           }
         }
       }
     },
     "sensor": {
-      "tvoc": { "name": "TVOC" },
-      "voc_index": { "name": "VOC index" },
-      "nox_index": { "name": "NOx index" },
-      "vape_index": { "name": "Vape index" }
+      "tvoc": {
+        "name": "TVOC"
+      },
+      "voc_index": {
+        "name": "VOC index"
+      },
+      "nox_index": {
+        "name": "NOx index"
+      },
+      "vape_index": {
+        "name": "Vape index"
+      },
+      "smoke_value": {
+        "name": "Smoke sensor value"
+      },
+      "co_value": {
+        "name": "CO sensor value"
+      }
     }
   }
 }

@@ -14,6 +14,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.const import (
+    EntityCategory,
     PERCENTAGE,
     UnitOfDensity,
     UnitOfRatio,
@@ -22,7 +23,7 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .const import KIND_AIR
+from .const import KIND_AIR, KIND_SMOKE
 from .coordinator import ProtectConfigEntry, ProtectCoordinator
 from .entity import ProtectSensorEntity, async_add_dynamic
 
@@ -120,6 +121,23 @@ METRICS: tuple[AirSensorDescription, ...] = (
 )
 
 
+SMOKE_VALUES: tuple[SensorEntityDescription, ...] = (
+    SensorEntityDescription(
+        key="smoke_value",
+        translation_key="smoke_value",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    SensorEntityDescription(
+        key="co_value",
+        translation_key="co_value",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+)
+_SMOKE_VALUE_KEYS = {"smoke_value": "smokeValue", "co_value": "coValue"}
+
+
 def read_metric(
     raw: Mapping[str, Any], keys: tuple[str, ...]
 ) -> tuple[bool, float | None, str | None]:
@@ -151,7 +169,9 @@ async def async_setup_entry(
 ) -> None:
     def factory(
         coordinator: ProtectCoordinator, sensor_id: str, kind: str, raw: dict[str, Any]
-    ) -> Iterable[AirQualitySensor]:
+    ) -> Iterable[SensorEntity]:
+        if kind == KIND_SMOKE:
+            return [SmokeValueSensor(coordinator, sensor_id, d) for d in SMOKE_VALUES]
         if kind != KIND_AIR:
             return []
         return [
@@ -176,3 +196,17 @@ class AirQualitySensor(ProtectSensorEntity, SensorEntity):
     def extra_state_attributes(self) -> dict[str, Any] | None:
         status = read_metric(self.raw, self.entity_description.payload_keys)[2]
         return {"status": status} if status else None
+
+
+class SmokeValueSensor(ProtectSensorEntity, SensorEntity):
+    """Raw smoke / CO reading reported by a USL Smoke (diagnostic)."""
+
+    @property
+    def native_value(self) -> float | None:
+        status = self.raw.get("smokeStatus")
+        if not isinstance(status, Mapping):
+            return None
+        value = status.get(_SMOKE_VALUE_KEYS[self.entity_description.key])
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            return value
+        return None

@@ -1,8 +1,9 @@
-"""Smoke / CO alarm and air-quality alert binary sensors."""
+"""Smoke / CO alarm, detector health and air-quality alert binary sensors."""
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable, Mapping
+from dataclasses import dataclass
 from typing import Any
 
 from homeassistant.components.binary_sensor import (
@@ -10,6 +11,7 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
@@ -18,12 +20,85 @@ from .coordinator import ProtectConfigEntry, ProtectCoordinator
 from .entity import ProtectSensorEntity, async_add_dynamic
 from .sensor import METRICS, read_metric
 
-SMOKE = BinarySensorEntityDescription(
-    key="smoke", device_class=BinarySensorDeviceClass.SMOKE
+
+def smoke_status(raw: Mapping[str, Any]) -> Mapping[str, Any]:
+    status = raw.get("smokeStatus")
+    return status if isinstance(status, Mapping) else {}
+
+
+@dataclass(frozen=True, kw_only=True)
+class SmokeBinaryDescription(BinarySensorEntityDescription):
+    """A USL Smoke flag, read from ``smokeStatus`` and/or alarm events."""
+
+    status_key: str
+    alarm_key: str | None = None  # also on while a matching alarm event is open
+    extra: Callable[[Mapping[str, Any]], bool] | None = None
+
+
+SMOKE_DESCRIPTIONS: tuple[SmokeBinaryDescription, ...] = (
+    SmokeBinaryDescription(
+        key="smoke",
+        device_class=BinarySensorDeviceClass.SMOKE,
+        status_key="smokeAlarm",
+        alarm_key="smoke",
+    ),
+    SmokeBinaryDescription(
+        key="co",
+        device_class=BinarySensorDeviceClass.CO,
+        status_key="coAlarm",
+        alarm_key="co",
+    ),
+    SmokeBinaryDescription(
+        key="battery_low",
+        device_class=BinarySensorDeviceClass.BATTERY,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        status_key="batteryLow",
+        extra=lambda raw: (raw.get("batteryStatus") or {}).get("isLow") is True,
+    ),
+    SmokeBinaryDescription(
+        key="needs_cleaning",
+        translation_key="needs_cleaning",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        status_key="cleanSmokeSensor",
+    ),
+    SmokeBinaryDescription(
+        key="smoke_sensor_fault",
+        translation_key="smoke_sensor_fault",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        status_key="smokeSensorFault",
+    ),
+    SmokeBinaryDescription(
+        key="co_sensor_fault",
+        translation_key="co_sensor_fault",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        status_key="coSensorFault",
+    ),
+    SmokeBinaryDescription(
+        key="end_of_life",
+        translation_key="end_of_life",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        status_key="endOfLife",
+    ),
+    SmokeBinaryDescription(
+        key="testing",
+        translation_key="testing",
+        device_class=BinarySensorDeviceClass.RUNNING,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        status_key="testing",
+        extra=lambda raw: raw.get("isTestModeActive") is True,
+    ),
+    SmokeBinaryDescription(
+        key="alarm_silenced",
+        translation_key="alarm_silenced",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        status_key="alarmSilenced",
+    ),
 )
-CO = BinarySensorEntityDescription(
-    key="co", device_class=BinarySensorDeviceClass.CO
-)
+
 AIR_ALERT = BinarySensorEntityDescription(
     key="air_quality_alert",
     translation_key="air_quality_alert",
@@ -33,15 +108,13 @@ VAPE = BinarySensorEntityDescription(
     key="vape", translation_key="vape", device_class=BinarySensorDeviceClass.PROBLEM
 )
 
-# Boolean flags a smoke detector payload might carry directly.
-_RAW_FLAGS = {
-    "smoke": ("isSmokeDetected", "smokeDetected", "isSmokeAlarmActive"),
-    "co": ("isCoDetected", "coDetected", "isCoAlarmActive"),
-}
-
 
 def _is_alarm_status(status: str | None) -> bool:
     return status is not None and status.casefold() not in OK_STATUSES
+
+
+def smoke_keys() -> set[str]:
+    return {d.key for d in SMOKE_DESCRIPTIONS}
 
 
 async def async_setup_entry(
@@ -54,8 +127,8 @@ async def async_setup_entry(
     ) -> Iterable[BinarySensorEntity]:
         if kind == KIND_SMOKE:
             return [
-                SmokeAlarmBinarySensor(coordinator, sensor_id, SMOKE),
-                SmokeAlarmBinarySensor(coordinator, sensor_id, CO),
+                SmokeBinarySensor(coordinator, sensor_id, desc)
+                for desc in SMOKE_DESCRIPTIONS
             ]
         if kind == KIND_AIR:
             entities: list[BinarySensorEntity] = [
@@ -69,15 +142,30 @@ async def async_setup_entry(
     async_add_dynamic(entry, async_add_entities, factory)
 
 
-class SmokeAlarmBinarySensor(ProtectSensorEntity, BinarySensorEntity):
-    """On while Protect reports an open smoke or CO alarm."""
+class SmokeBinarySensor(ProtectSensorEntity, BinarySensorEntity):
+    """A USL Smoke alarm or health flag."""
+
+    entity_description: SmokeBinaryDescription
 
     @property
     def is_on(self) -> bool:
-        key = self.entity_description.key
-        if self.coordinator.alarm_active(self.sensor_id, key):
+        desc = self.entity_description
+        if smoke_status(self.raw).get(desc.status_key) is True:
             return True
-        return any(self.raw.get(flag) is True for flag in _RAW_FLAGS[key])
+        if desc.alarm_key and self.coordinator.alarm_active(self.sensor_id, desc.alarm_key):
+            return True
+        return bool(desc.extra and desc.extra(self.raw))
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        if self.entity_description.alarm_key is None:
+            return None
+        status = smoke_status(self.raw)
+        return {
+            k: status[k]
+            for k in ("ready", "enabled", "alarmSilenced")
+            if k in status
+        } or None
 
 
 class AirAlertBinarySensor(ProtectSensorEntity, BinarySensorEntity):

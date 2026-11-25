@@ -234,3 +234,58 @@ def test_decode_ws_message() -> None:
     assert decode_ws_message(b"\x01\x02") is None
     binary = _frame({"action": "update"}) + struct.pack("!bbbbi", 2, 3, 0, 0, 2) + b"\x00\x01"
     assert decode_ws_message(binary) == ({"action": "update"}, None)
+
+
+async def test_smoke_device_gets_smoke_entities_only(hass: HomeAssistant, fake_api) -> None:
+    await _setup(hass)
+    reg = er.async_get(hass)
+    smoke_ids = {e.unique_id for e in reg.entities.values() if e.unique_id.startswith("sm1_")}
+    assert "sm1_temperature" not in smoke_ids
+    assert "sm1_air_quality_alert" not in smoke_ids
+    assert {"sm1_smoke", "sm1_co", "sm1_needs_cleaning", "sm1_end_of_life",
+            "sm1_smoke_value"} <= smoke_ids
+    assert hass.states.get(_eid(hass, "sm1_smoke_value", "sensor")).state == "3296"
+
+
+async def test_smoke_status_push(hass: HomeAssistant, fake_api) -> None:
+    entry = await _setup(hass)
+    coordinator = entry.runtime_data
+    smoke = _eid(hass, "sm1_smoke", "binary_sensor")
+    clean = _eid(hass, "sm1_needs_cleaning", "binary_sensor")
+    assert hass.states.get(smoke).attributes["ready"] is True
+    coordinator._handle_push(
+        {"action": "update", "modelKey": "sensor", "id": "sm1"},
+        {"smokeStatus": {"smokeAlarm": True, "cleanSmokeSensor": True}},
+    )
+    await hass.async_block_till_done()
+    assert hass.states.get(smoke).state == "on"
+    assert hass.states.get(clean).state == "on"
+    coordinator._handle_push(
+        {"action": "update", "modelKey": "sensor", "id": "sm1"},
+        {"smokeStatus": {"smokeAlarm": False}},
+    )
+    await hass.async_block_till_done()
+    assert hass.states.get(smoke).state == "off"
+
+
+async def test_stale_entities_and_devices_removed(hass: HomeAssistant, fake_api) -> None:
+    entry = MockConfigEntry(domain=DOMAIN, data=DATA, unique_id="aa:bb:cc:dd:ee:ff")
+    entry.add_to_hass(hass)
+    dev_reg = dr.async_get(hass)
+    reg = er.async_get(hass)
+    smoke_dev = dev_reg.async_get_or_create(
+        config_entry_id=entry.entry_id, identifiers={(DOMAIN, "sm1")}
+    )
+    motion_dev = dev_reg.async_get_or_create(
+        config_entry_id=entry.entry_id, identifiers={(DOMAIN, "mo1")}
+    )
+    reg.async_get_or_create("sensor", DOMAIN, "sm1_temperature",
+                            config_entry=entry, device_id=smoke_dev.id)
+    reg.async_get_or_create("sensor", DOMAIN, "mo1_temperature",
+                            config_entry=entry, device_id=motion_dev.id)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    assert reg.async_get_entity_id("sensor", DOMAIN, "sm1_temperature") is None
+    assert reg.async_get_entity_id("sensor", DOMAIN, "mo1_temperature") is None
+    assert dev_reg.async_get(motion_dev.id) is None
+    assert dev_reg.async_get(smoke_dev.id) is not None

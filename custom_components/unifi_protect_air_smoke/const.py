@@ -41,6 +41,8 @@ TRACKED_EVENT_TYPES = frozenset(
 ALARM_TYPES: dict[str, str] = {"smoke": "smoke", "co": "co"}
 
 # Air-quality metric statuses that mean "not alarming".
-OK_STATUSES = frozenset({"good", "normal", "neutral", "safe", "ok", "none", ""})
+OK_STATUSES = frozenset(
+    {"good", "normal", "neutral", "safe", "ok", "none", "unknown", ""}
+)
 
 SIGNAL_EVENT = f"{DOMAIN}_event_{{entry_id}}"

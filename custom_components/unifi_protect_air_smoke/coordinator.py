@@ -45,16 +45,31 @@ _PUSH_GRACE_MS = 2 * 60 * 1000
 
 
 def device_kind(raw: Mapping[str, Any]) -> str | None:
-    """Classify a Protect sensor payload as air-quality, smoke, or neither."""
+    """Classify a Protect sensor payload as air-quality, smoke, or neither.
+
+    Every Protect sensor carries an ``airQuality`` block (all null on models
+    without the hardware), so the model type decides first.
+    """
     text = " ".join(
         str(raw.get(k, "")) for k in ("type", "marketName", "model", "sku")
     ).upper()
     compact = "".join(c for c in text if c.isalnum())
-    if isinstance(raw.get("airQuality"), Mapping) or "AIRQUALITY" in compact:
+    if "AIRQUALITY" in compact:
         return KIND_AIR
     flags = raw.get("featureFlags")
-    if "SMOKE" in compact or (isinstance(flags, Mapping) and flags.get("smoke")):
+    flags = flags if isinstance(flags, Mapping) else {}
+    alarm_types = flags.get("alarmTypes")
+    if (
+        "SMOKE" in compact
+        or flags.get("smoke")
+        or (isinstance(alarm_types, list) and "smoke" in alarm_types)
+    ):
         return KIND_SMOKE
+    air = raw.get("airQuality")
+    if isinstance(air, Mapping) and any(
+        isinstance(v, Mapping) and v.get("value") is not None for v in air.values()
+    ):
+        return KIND_AIR
     return None
 
 
@@ -135,6 +150,7 @@ class ProtectCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
         self.pulses: dict[tuple[str, str], float] = {}
         self.recent_events: deque[dict[str, Any]] = deque(maxlen=50)
         self.stream_connected = False
+        self.created_unique_ids: set[str] = set()
         self._events: dict[str, dict[str, Any]] = {}
         self._seen: set[str] = set()
         self._primed = False

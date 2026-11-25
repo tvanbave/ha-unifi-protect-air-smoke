@@ -82,6 +82,7 @@ def async_add_dynamic(
             for entity in factory(coordinator, sensor_id, kind, raw):
                 if entity.unique_id and entity.unique_id not in known:
                     known.add(entity.unique_id)
+                    coordinator.created_unique_ids.add(entity.unique_id)
                     new.append(entity)
         if new:
             async_add_entities(new)

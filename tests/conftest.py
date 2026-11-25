@@ -41,7 +41,30 @@ SMOKE = {
     "isConnected": True,
     "modelKey": "sensor",
 }
-MOTION = {"id": "mo1", "type": "USL-Motion-US", "marketName": "USL Motion", "mac": "7DB4FF804F03"}
+NULL_AIR = {
+    k: {"value": None, "status": "unknown"}
+    for k in ("aqi", "vape", "tvoc", "pm1p0", "pm2p5", "pm4p0", "pm10p0",
+              "humidity", "temperature", "voc", "nox", "co2")
+}
+SMOKE_STATUS = {
+    "enabled": True, "ready": True, "testing": False, "alarmSilenced": False,
+    "smokeAlarm": False, "coAlarm": False, "troubleHushed": False,
+    "batteryLow": False, "cleanSmokeSensor": False, "smokeSensorFault": False,
+    "coSensorFault": False, "endOfLife": False, "smokeValue": 3296, "coValue": 0,
+    "batteryVoltage": 0, "wasMounted": True,
+}
+SMOKE["airQuality"] = NULL_AIR
+SMOKE["smokeStatus"] = SMOKE_STATUS
+SMOKE["featureFlags"] = {"smoke": {"channelCount": 1}, "alarmTypes": ["smoke", "CO"]}
+SMOKE["batteryStatus"] = {"percentage": 100, "isLow": False}
+AQ["smokeStatus"] = {**SMOKE_STATUS, "enabled": False, "ready": False, "smokeValue": 0}
+AQ["featureFlags"] = {}
+MOTION = {
+    "id": "mo1", "type": "USL-Motion-US", "marketName": "USL Motion",
+    "mac": "7DB4FF804F03", "airQuality": NULL_AIR,
+    "smokeStatus": {**SMOKE_STATUS, "enabled": False},
+    "featureFlags": {"motion": {"channelCount": 2}},
+}
 
 
 def now_ms() -> int:
